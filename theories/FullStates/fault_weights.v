@@ -29,7 +29,6 @@ Import PEstimator.
 Module PLocally_Sorted := Locally_Sorted PCons PVal PVal_Weights PEstimator.
 Export PLocally_Sorted.
 
-
 (****************************)
 (** Fault Weight of States **)
 (****************************)
