@@ -818,7 +818,7 @@ Proof.
   - simpl.
     now apply next_equivocation_state_keeps_messages.
 Qed.
-
+(*
 Lemma next_equivocations_keeps_equivocating_senders :
   forall (s : state) (vs : list common.V) (v0 : common.V),
   forall (v : common.V),
@@ -868,7 +868,7 @@ Proof.
     assumption. assumption.
     now apply next_equivocation_state_keeps_equivocating_messages. 
 Qed.
-
+*)
 Lemma next_equivocations_equivocating_senders_iff :
   forall (s : state) (vs : list common.V) (v0 v : common.V),
     (In v vs -> v <> v0) ->

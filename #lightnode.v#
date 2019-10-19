@@ -2179,7 +2179,7 @@ Proof.
     split.
     + simpl.  
       apply next_equivocation_protocol_state; try assumption.
-      intros H_absurd.
+Rprotocol      intros H_absurd.
       spec H_rewrite H_absurd. 
       tauto.
       (* Need a helper lemma about weight adding here *) 
