@@ -68,13 +68,9 @@ Definition vlsm_sig_projection
   ;   label_inhabited := ilabel_type_inhabited i
   |}.
 
-(*   ;   transition := vlsm_projection_transition i
-  ;   valid := vlsm_projection_valid i
- *)
-
 Definition transitioning_projection
   {message : Type}
-  `{CV : composed_vlsm_class message}
+  `{CV : composed_lsm_class message}
   (i : index)
   (il : @label _ (vlsm_sig_projection i))
   (isom isom' : @state _ (vlsm_sig_projection i) * option {m : message | @proto_message_prop _ (vlsm_sig_projection i) m})
@@ -89,7 +85,7 @@ Definition transitioning_projection
 
 Lemma vlsm_projection_transition_existence
   {message : Type}
-  `{CV : composed_vlsm_class message}
+  `{CV : composed_lsm_class message}
   (i : index)
   (il : @label _ (vlsm_sig_projection i))
   (isom : @state _ (vlsm_sig_projection i) * option {m : message | @proto_message_prop _ (vlsm_sig_projection i) m})
@@ -122,7 +118,7 @@ Require Import Coq.Logic.IndefiniteDescription.
 
 Definition vlsm_projection_transition
   {message : Type}
-  `{CV : composed_vlsm_class message}
+  `{CV : composed_lsm_class message}
   (i : index)
   (il : @label _ (vlsm_sig_projection i))
   (isom : @state _ (vlsm_sig_projection i) * option {m : message | @proto_message_prop _ (vlsm_sig_projection i) m})
@@ -134,6 +130,16 @@ Definition vlsm_projection_transition
       (vlsm_projection_transition_existence i il isom)
     )
   ).
+
+Definition lsm_projection
+  {message : Type}
+  `{CV : composed_lsm_class message}
+  (i : index)
+  : @LSM (message : Type) (vlsm_sig_projection i)
+  :=
+  {|  transition := vlsm_projection_transition i
+  |}.
+
 
 Definition vlsm_projection_valid
   {message : Type}
@@ -151,21 +157,22 @@ Definition vlsm_projection
   {message : Type}
   `{CV : composed_vlsm_class message}
   (i : index)
-  : @VLSM (message : Type) (vlsm_sig_projection i)
+  : @VLSM (message : Type) _ (lsm_projection i)
   :=
-  {|  transition := vlsm_projection_transition i
-  ;   valid := vlsm_projection_valid i
+  {|  valid := vlsm_projection_valid i
   |}.
 
 
 Lemma protocol_state_projection
   {message : Type}
   {S : LSM_sig message}
-  {V : @VLSM message S}
-  {SV : @composed_sig_class _ S}
-  `{CV : @composed_vlsm_class message _ SV V}
+  {L : @LSM message S}
+  {V : @VLSM message S L}
+  {CS : @composed_sig_class _ S}
+  {CL : @composed_lsm_class _ S CS L}
+  `{CV : @composed_vlsm_class message _ _ _ CL V}
   : forall (i : index) (s :  protocol_state),
-  @protocol_state_prop _ (vlsm_sig_projection i) (vlsm_projection i) (proj_istate (proj1_sig s) i).
+  @protocol_state_prop _ _ _ (vlsm_projection i) (proj_istate (proj1_sig s) i).
 Proof.
   intros i [s Hps]. simpl. induction Hps as [is | s s'' l om' Hps Hp Hv Ht| s s'' l m om' Hps Hp Hpm Hv Ht].
   - apply protocol_state_prop_iff. left. 

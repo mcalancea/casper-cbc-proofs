@@ -51,8 +51,9 @@ Definition consistent
   {index : Set}
   {message : Type}
   `{VLSM_plus}
-  (IS : index -> LSM_sig message)
-  (IM : forall i : index, @VLSM message (IS i))
+  {IS : index -> LSM_sig message}
+  {IL : forall i : index, @LSM message (IS i)}
+  (IM : forall i : index, @VLSM message _ (IL i))
   (ID : index -> decision)
   : Prop
   :=

@@ -52,8 +52,7 @@ Proof.
   - inversion Heq. reflexivity.
 Qed.
 
-
-Class composed_vlsm_class (message : Type) {S : LSM_sig message} `{@composed_sig_class message S} `{M : @VLSM message S}
+Class composed_lsm_class (message : Type) {S : LSM_sig message} `{@composed_sig_class message S} `{L : @LSM message S}
   :=
   { transition_projection_consistency
     : forall (s1 s2 : state) (om : option proto_message) (l : label) (i : index := ilabel l)
@@ -72,7 +71,17 @@ Class composed_vlsm_class (message : Type) {S : LSM_sig message} `{@composed_sig
         (m' : proto_message)
         (Ht : transition l (s, om) = (s', Some m')),
         (iproto_message_prop i (proj1_sig m'))
-  ; transition_projection_message_type_mismatch
+  }.
+
+Class composed_vlsm_class
+  (message : Type)
+  {S : LSM_sig message}
+  {CS : @composed_sig_class message S}
+  {L : @LSM message S}
+  {CL : @composed_lsm_class message S CS L}
+  `{M : @VLSM message S L}
+  :=
+  { transition_projection_message_type_mismatch
     : forall (s : state) (m : proto_message) (l : label) (i : index := ilabel l)
         (Hnm : ~ (iproto_message_prop i (proj1_sig m))),
         ~ valid l (s, Some m)
@@ -202,15 +211,15 @@ Definition composed2_sig_composed_instance
 Lemma composed2_transition_projection_consistency
   {message}
   {S1 S2 : LSM_sig message}
-  (M1 : @VLSM message S1)
-  (M2 : @VLSM message S2)
+  (L1 : @LSM message S1)
+  (L2 : @LSM message S2)
   (s1 s2 : @state _ (composed2_sig S1 S2))
   (om : option (@proto_message _ (composed2_sig S1 S2)))
   (l : @label _ (composed2_sig S1 S2))
   (i : @index _ _ (composed2_sig_composed_instance S1 S2) := composed2_ilabel S1 S2 l)
   (Hproj_s : composed2_istate_proj S1 S2 i s1 = composed2_istate_proj S1 S2 i s2)
-  : let (s1', om1') := (@transition _ _ (composed2_vlsm M1 M2) l (s1, om)) in
-    let (s2', om2') := (@transition _ _ (composed2_vlsm M1 M2) l (s2, om)) in
+  : let (s1', om1') := (@transition _ _ (composed2_lsm L1 L2) l (s1, om)) in
+    let (s2', om2') := (@transition _ _ (composed2_lsm L1 L2) l (s2, om)) in
     (   om1' = om2'
     /\  composed2_istate_proj S1 S2 i s1' = composed2_istate_proj S1 S2 i s2'
     )
@@ -230,14 +239,14 @@ Qed.
 Lemma composed2_transition_projection_state_preservation
   {message}
   {S1 S2 : LSM_sig message}
-  (M1 : @VLSM message S1)
-  (M2 : @VLSM message S2)
+  (L1 : @LSM message S1)
+  (L2 : @LSM message S2)
   (s : @state _ (composed2_sig S1 S2))
   (om : option (@proto_message _ (composed2_sig S1 S2)))
   (l : @label _ (composed2_sig S1 S2))
   (i : @index _ _ (composed2_sig_composed_instance S1 S2))
   (Hnli : @ilabel _ _ (composed2_sig_composed_instance S1 S2) l <> i)
-  : let (s', _) := @transition _ _ (composed2_vlsm M1 M2) l (s, om) in
+  : let (s', _) := @transition _ _ (composed2_lsm L1 L2) l (s, om) in
     @istate_proj _ _ (composed2_sig_composed_instance S1 S2) i s' = @istate_proj _ _ (composed2_sig_composed_instance S1 S2) i s
   .
 Proof.
@@ -253,37 +262,18 @@ Proof.
 Qed.
 
 
-Lemma composed2_transition_projection_message_type_mismatch
-  {message}
-  {S1 S2 : LSM_sig message}
-  (M1 : @VLSM message S1)
-  (M2 : @VLSM message S2)
-  (s : @state _ (composed2_sig S1 S2))
-  (m : @proto_message _ (composed2_sig S1 S2))
-  (l : @label _ (composed2_sig S1 S2))
-  (i : composed2_index := composed2_ilabel S1 S2 l)
-  (Hnm : ~ (composed2_iproto_message_prop S1 S2 i (proj1_sig m)))
-  : ~ @valid _ _ (composed2_vlsm M1 M2)  l (s, Some m).
-Proof.
-  simpl. destruct s as [s1 s2]. destruct m as [m Hm].
-  destruct l as [lone | ltwo]
-  ; destruct (proto_message_decidable m)
-  ; intro; contradiction.
-Qed.
-
-
 Lemma composed2_transition_projection_message_type_preservation
   {message}
   {S1 S2 : LSM_sig message}
-  (M1 : @VLSM message S1)
-  (M2 : @VLSM message S2)
+  (L1 : @LSM message S1)
+  (L2 : @LSM message S2)
   (s : @state _ (composed2_sig S1 S2))
   (om : option (@proto_message _ (composed2_sig S1 S2)))
   (l : @label _ (composed2_sig S1 S2))
   (i : composed2_index := composed2_ilabel S1 S2 l)
   (s' : @state _ (composed2_sig S1 S2))
   (m' : @proto_message _ (composed2_sig S1 S2))
-  (Ht : @transition _ _ (composed2_vlsm M1 M2) l (s, om) = (s', Some m'))
+  (Ht : @transition _ _ (composed2_lsm L1 L2) l (s, om) = (s', Some m'))
   : composed2_iproto_message_prop S1 S2 i (proj1_sig m').
 Proof.
   unfold composed2_iproto_message_prop.
@@ -301,16 +291,48 @@ Proof.
   - destruct (transition ltwo (s2, None)) as [s'' [[m'' Hm'']|]]; inversion Hm'; subst; assumption.
 Qed.
 
+Definition composed2_lsm_composed_instance
+  {message}
+  {S1 S2 : LSM_sig message}
+  (L1 : @LSM message S1)
+  (L2 : @LSM message S2)
+  : @composed_lsm_class message _ (@composed2_sig_composed_instance _ S1 S2) (composed2_lsm L1 L2) :=
+  {| transition_projection_consistency := composed2_transition_projection_consistency L1 L2
+  ; transition_projection_state_preservation := composed2_transition_projection_state_preservation L1 L2
+  ; transition_projection_message_type_preservation := composed2_transition_projection_message_type_preservation L1 L2
+  |}.
+
+
+Lemma composed2_transition_projection_message_type_mismatch
+  {message}
+  {S1 S2 : LSM_sig message}
+  {L1 : @LSM message S1}
+  {L2 : @LSM message S2}
+  (M1 : @VLSM message S1 L1)
+  (M2 : @VLSM message S2 L2)
+  (s : @state _ (composed2_sig S1 S2))
+  (m : @proto_message _ (composed2_sig S1 S2))
+  (l : @label _ (composed2_sig S1 S2))
+  (i : composed2_index := composed2_ilabel S1 S2 l)
+  (Hnm : ~ (@iproto_message_prop _ _ (composed2_sig_composed_instance S1 S2) i (proj1_sig m)))
+  : ~ @valid _ _ _ (composed2_vlsm M1 M2)  l (s, Some m).
+Proof.
+  simpl. destruct s as [s1 s2]. destruct m as [m Hm].
+  destruct l as [lone | ltwo]
+  ; destruct (proto_message_decidable m)
+  ; intro; contradiction.
+Qed.
+
+
 Definition composed2_vlsm_composed_instance
   {message}
   {S1 S2 : LSM_sig message}
-  (M1 : @VLSM message S1)
-  (M2 : @VLSM message S2)
-  : @composed_vlsm_class message _ (@composed2_sig_composed_instance _ S1 S2) (composed2_vlsm M1 M2) :=
-  {| transition_projection_consistency := composed2_transition_projection_consistency M1 M2
-  ; transition_projection_state_preservation := composed2_transition_projection_state_preservation M1 M2
-  ; transition_projection_message_type_mismatch := composed2_transition_projection_message_type_mismatch M1 M2
-  ; transition_projection_message_type_preservation := composed2_transition_projection_message_type_preservation M1 M2
+  {L1 : @LSM message S1}
+  {L2 : @LSM message S2}
+  (M1 : @VLSM message S1 L1)
+  (M2 : @VLSM message S2 L2)
+  : @composed_vlsm_class message _ _ _ (composed2_lsm_composed_instance L1 L2) (composed2_vlsm M1 M2) :=
+  {| transition_projection_message_type_mismatch := composed2_transition_projection_message_type_mismatch M1 M2
   |}.
 
 
@@ -410,15 +432,15 @@ Definition indexed_sig_composed_instance
 Lemma indexed_transition_projection_consistency
   {oindex : Set} {message : Type} `{Heqd : EqDec oindex}
   {IS : oindex -> LSM_sig message}
-  {IM : forall i : oindex, @VLSM message (IS i)}
+  {IL : forall i : oindex, @LSM message (IS i)}
   {Hinh : inhabited oindex}
   (s1 s2 : @state _ (indexed_sig IS Hinh))
   (om : option (@proto_message _ (indexed_sig IS Hinh)))
   (l : @label _ (indexed_sig IS Hinh))
   (i : oindex := @ilabel _ _ (indexed_sig_composed_instance IS Hinh) l)
   (Hproj_s : @istate_proj _ _ (indexed_sig_composed_instance IS Hinh) i s1 = @istate_proj _ _ (indexed_sig_composed_instance IS Hinh) i s2)
-  : let (s1', om1') := @transition _ _ (indexed_vlsm IM Hinh) l (s1, om) in
-    let (s2', om2') := @transition _ _ (indexed_vlsm IM Hinh) l (s2, om) in
+  : let (s1', om1') := @transition _ _ (indexed_lsm IL Hinh) l (s1, om) in
+    let (s2', om2') := @transition _ _ (indexed_lsm IL Hinh) l (s2, om) in
     (   om1' = om2'
     /\  @istate_proj _ _ (indexed_sig_composed_instance IS Hinh) i s1' = @istate_proj _ _ (indexed_sig_composed_instance IS Hinh) i s2'
     )
@@ -441,14 +463,14 @@ Qed.
 Lemma indexed_transition_projection_state_preservation
   {oindex : Set} {message : Type} `{Heqd : EqDec oindex}
   {IS : oindex -> LSM_sig message}
-  {IM : forall i : oindex, @VLSM message (IS i)}
+  {IL : forall i : oindex, @LSM message (IS i)}
   {Hinh : inhabited oindex}
   (s : indexed_state IS)
   (om : option (indexed_proto_message IS))
   (l : indexed_label IS)
   (i : oindex)
   (Hnli : indexed_ilabel l <> i)
-  : let (s', _) := @transition _ _ (indexed_vlsm IM Hinh) l (s, om) in
+  : let (s', _) := @transition _ _ (indexed_lsm IL Hinh) l (s, om) in
     @indexed_istate_proj _ _ _ _ Hinh i s' = @indexed_istate_proj _ _ _ _ Hinh i s
   .
 Proof.
@@ -465,30 +487,10 @@ Proof.
 Qed.
 
 
-Lemma indexed_transition_projection_message_type_mismatch
-  {oindex : Set} {message : Type} `{Heqd : EqDec oindex}
-  {IS : oindex -> LSM_sig message}
-  {IM : forall i : oindex, @VLSM message (IS i)}
-  {Hinh : inhabited oindex}
-  (s : indexed_state IS)
-  (m : indexed_proto_message IS)
-  (l : indexed_label IS)
-  (i : oindex := indexed_ilabel l)
-  (Hnm : ~ (indexed_iproto_message_prop i (proj1_sig m)))
-  : ~ @valid _ _ (indexed_vlsm IM Hinh)  l (s, Some m) .
-Proof.
-  simpl. destruct l as [j l]. simpl in i. unfold i in *.
-  destruct m as [m Hm]; simpl in Hnm.
-  destruct (proto_message_decidable m)
-  ; intro; contradiction
-  .
-Qed.
-
-
 Lemma indexed_transition_projection_message_type_preservation
   {oindex : Set} {message : Type} `{Heqd : EqDec oindex}
   {IS : oindex -> LSM_sig message}
-  {IM : forall i : oindex, @VLSM message (IS i)}
+  {IL : forall i : oindex, @LSM message (IS i)}
   {Hinh : inhabited oindex}
   (s : indexed_state IS)
   (om : option (indexed_proto_message IS))
@@ -496,7 +498,7 @@ Lemma indexed_transition_projection_message_type_preservation
   (i : oindex := indexed_ilabel l)
   (s' : indexed_state IS)
   (m' : indexed_proto_message IS)
-  (Ht : @transition _ _ (indexed_vlsm IM Hinh) l (s, om) = (s', Some m'))
+  (Ht : @transition _ _ (indexed_lsm IL Hinh) l (s, om) = (s', Some m'))
   : indexed_iproto_message_prop i (proj1_sig m').
 Proof.
   destruct l as [j l]. simpl in i. unfold i in *.
@@ -512,16 +514,44 @@ Proof.
     assumption.
 Qed.
 
-Definition indexed_vlsm_composed_instance
+Definition indexed_lsm_composed_instance
   {oindex : Set} {message : Type} `{Heqd : EqDec oindex}
   {IS : oindex -> LSM_sig message}
-  (IM : forall i : oindex, @VLSM message (IS i))
+  (IL : forall i : oindex, @LSM message (IS i))
   (Hinh : inhabited oindex)
-  : @composed_vlsm_class message _ (indexed_sig_composed_instance IS Hinh) (indexed_vlsm IM Hinh) :=
+  : @composed_lsm_class message _ (indexed_sig_composed_instance IS Hinh) (indexed_lsm IL Hinh) :=
   {|  transition_projection_consistency := indexed_transition_projection_consistency
   ;   transition_projection_state_preservation := indexed_transition_projection_state_preservation
-  ;   transition_projection_message_type_mismatch := indexed_transition_projection_message_type_mismatch
   ; transition_projection_message_type_preservation := indexed_transition_projection_message_type_preservation
   |}.
 
+Lemma indexed_transition_projection_message_type_mismatch
+  {oindex : Set} {message : Type} `{Heqd : EqDec oindex}
+  {IS : oindex -> LSM_sig message}
+  {IL : forall i : oindex, @LSM message (IS i)}
+  {IM : forall i : oindex, @VLSM message _ (IL i)}
+  {Hinh : inhabited oindex}
+  (s : @state _ (indexed_sig IS Hinh))
+  (m : @proto_message _ (indexed_sig IS Hinh))
+  (l : @label _ (indexed_sig IS Hinh))
+  (i : oindex := indexed_ilabel l)
+  (Hnm : ~ (@iproto_message_prop _ _ (indexed_sig_composed_instance IS Hinh) i (proj1_sig m)))
+  : ~ @valid _ _ _ (indexed_vlsm IM Hinh)  l (s, Some m) .
+Proof.
+  simpl. destruct l as [j l]. simpl in i. unfold i in *.
+  destruct m as [m Hm]; simpl in Hnm.
+  destruct (proto_message_decidable m)
+  ; intro; contradiction
+  .
+Qed.
+
+Definition indexed_vlsm_composed_instance
+  {oindex : Set} {message : Type} `{Heqd : EqDec oindex}
+  {IS : oindex -> LSM_sig message}
+  {IL : forall i : oindex, @LSM message (IS i)}
+  (IM : forall i : oindex, @VLSM message _ (IL i))
+  (Hinh : inhabited oindex)
+  : @composed_vlsm_class message _ _ _ (indexed_lsm_composed_instance IL Hinh) (indexed_vlsm IM Hinh) :=
+  {|   transition_projection_message_type_mismatch := indexed_transition_projection_message_type_mismatch
+  |}.
 

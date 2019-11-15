@@ -25,9 +25,12 @@ Class PLSM (message : Type) `{Sig : LSM_sig message} :=
   { ptransition : label -> state * option proto_message -> option (state * option proto_message)
   }.
 
-Class VLSM (message : Type) `{Sig : LSM_sig message } :=
+Class LSM (message : Type) `{Sig : LSM_sig message } :=
   { transition : label -> state * option proto_message -> state * option proto_message
-  ; valid : label -> state * option proto_message -> Prop
+  }.
+
+Class VLSM (message : Type) `{L : LSM message } :=
+  { valid : label -> state * option proto_message -> Prop
   }.
 
 
@@ -56,26 +59,34 @@ Definition ptransition_to_valid
   ptransition l som = None
   .
 
+Definition PLSM_LSM_instance
+  {message}
+  {Sig : LSM_sig message}
+  `(PM : @PLSM message Sig)
+  : @LSM message Sig
+  :=
+  {|  transition := ptransition_to_transition
+  |}.
+
 Definition PLSM_VLSM_instance
   {message}
   {Sig : LSM_sig message}
-  `{PM : @PLSM message Sig}
-  : @VLSM message Sig
+  `(PM : @PLSM message Sig)
+  : @VLSM message Sig (PLSM_LSM_instance PM)
   :=
-  {|  transition := ptransition_to_transition
-  ;   valid := ptransition_to_valid
+  {|  valid := ptransition_to_valid
   |}.
 
 Class VLSM_vdecidable (message : Type) `{M : VLSM message} :=
   { valid_decidable : forall l som, {valid l som} + {~valid l som} 
   }.
 
-
 Definition transition_valid_ptransition
   {message}
   {Sig : LSM_sig message}
-  {VM : @VLSM message Sig}
-  `{DVM : @VLSM_vdecidable message Sig VM}
+  {LM : @LSM message Sig}
+  {VM : @VLSM message Sig LM}
+  `{DVM : @VLSM_vdecidable message Sig LM VM}
   (l : label)
   (som :  state * option proto_message)
   : option (state * option proto_message)
@@ -88,8 +99,9 @@ Definition transition_valid_ptransition
 Definition DVLSM_PLSM_instance
   {message}
   {Sig : LSM_sig message}
-  {VM : @VLSM message Sig}
-  `(DVM : @VLSM_vdecidable message Sig VM)
+  {LM : @LSM message Sig}
+  {VM : @VLSM message Sig LM}
+  `(DVM : @VLSM_vdecidable message Sig LM VM)
   : @PLSM message Sig
   :=
   {|  ptransition := transition_valid_ptransition

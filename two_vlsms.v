@@ -182,8 +182,8 @@ Definition composed2_transition
   {message}
   {S1 : LSM_sig message}
   {S2 : LSM_sig message}
-  (M1 : @VLSM message S1)
-  (M2 : @VLSM message S2)
+  (L1 : @LSM message S1)
+  (L2 : @LSM message S2)
   (l : @label message (composed2_sig S1 S2))
   (som : @state message (composed2_sig S1 S2) * option (@proto_message _ (composed2_sig S1 S2)))
   : @state message (composed2_sig S1 S2) * option (@proto_message _ (composed2_sig S1 S2)).
@@ -204,12 +204,28 @@ destruct som as [[s1 s2] [[m Hm]|]].
       exact ((s1, fst som'), option_map (lift_proto_message2 S1 S2) (snd som')).
 Defined.
 
+Definition composed2_lsm
+  {message}
+  {S1 : LSM_sig message}
+  {S2 : LSM_sig message}
+  (L1 : @LSM message S1)
+  (L2 : @LSM message S2)
+  : @LSM message (composed2_sig S1 S2)
+  :=
+  {|  transition := composed2_transition L1 L2
+  |}.
+
+
+
+
 Definition composed2_valid
   {message}
   {S1 : LSM_sig message}
   {S2 : LSM_sig message}
-  (M1 : @VLSM message S1)
-  (M2 : @VLSM message S2)
+  {L1 : @LSM message S1}
+  {L2 : @LSM message S2}
+  (M1 : @VLSM message S1 L1)
+  (M2 : @VLSM message S2 L2)
   (l : @label message (composed2_sig S1 S2))
   (som : @state message (composed2_sig S1 S2) * option (@proto_message _ (composed2_sig S1 S2)))
   : Prop.
@@ -230,25 +246,28 @@ Definition composed2_vlsm
   {message}
   {S1 : LSM_sig message}
   {S2 : LSM_sig message}
-  (M1 : @VLSM message S1)
-  (M2 : @VLSM message S2)
-  : @VLSM message (composed2_sig S1 S2)
+  {L1 : @LSM message S1}
+  {L2 : @LSM message S2}
+  (M1 : @VLSM message S1 L1)
+  (M2 : @VLSM message S2 L2)
+  : @VLSM message (composed2_sig S1 S2) (composed2_lsm L1 L2)
   :=
-  {|  transition := composed2_transition M1 M2
-  ;   valid := composed2_valid M1 M2
+  {|  valid := composed2_valid M1 M2
   |}.
 
 
 Definition composed2_valid_decidable
   {message}
   {S1 S2 : LSM_sig message}
-  {M1 : @VLSM message S1}
-  {M2 : @VLSM message S2}
-  (DS1 : @VLSM_vdecidable message S1 M1)
-  (DS2 : @VLSM_vdecidable message S2 M2)
+  {L1 : @LSM message S1}
+  {L2 : @LSM message S2}
+  {M1 : @VLSM message S1 L1}
+  {M2 : @VLSM message S2 L2}
+  (DS1 : @VLSM_vdecidable message S1 L1 M1)
+  (DS2 : @VLSM_vdecidable message S2 L2 M2)
   (l : @label message (composed2_sig S1 S2))
   (som : @state _ (composed2_sig S1 S2) * option (@proto_message _ (composed2_sig S1 S2)))
-  : {@valid _ _ (composed2_vlsm M1 M2) l som} + {~@valid _ _ (composed2_vlsm M1 M2) l som}.
+  : {@valid _ _ _ (composed2_vlsm M1 M2) l som} + {~@valid _ _ _ (composed2_vlsm M1 M2) l som}.
   destruct som as [[s1 s2] [[m Hm]|]].
   - destruct l as [l1 | l2]; simpl.
     + destruct (@proto_message_decidable _ S1 m) as [H1 | _].
@@ -263,11 +282,13 @@ Defined.
 Definition composed2_vlsm_vdecidable
   {message}
   {S1 S2 : LSM_sig message}
-  {M1 : @VLSM message S1}
-  {M2 : @VLSM message S2}
-  (DS1 : @VLSM_vdecidable message S1 M1)
-  (DS2 : @VLSM_vdecidable message S2 M2)
-  : @VLSM_vdecidable message _ (composed2_vlsm M1 M2)
+  {L1 : @LSM message S1}
+  {L2 : @LSM message S2}
+  {M1 : @VLSM message S1 L1}
+  {M2 : @VLSM message S2 L2}
+  (DS1 : @VLSM_vdecidable message S1 L1 M1)
+  (DS2 : @VLSM_vdecidable message S2 L2 M2)
+  : @VLSM_vdecidable message _ _ (composed2_vlsm M1 M2)
   :=
   {|
     valid_decidable := composed2_valid_decidable DS1 DS2
@@ -304,8 +325,10 @@ Definition composed2_valid_constrained
   {message}
   {S1 : LSM_sig message}
   {S2 : LSM_sig message}
-  (M1 : @VLSM message S1)
-  (M2 : @VLSM message S2)
+  {L1 : @LSM message S1}
+  {L2 : @LSM message S2}
+  (M1 : @VLSM message S1 L1)
+  (M2 : @VLSM message S2 L2)
   (constraint : @label message (composed2_sig S1 S2) -> @state message (composed2_sig S1 S2) * option (@proto_message _ (composed2_sig S1 S2)) -> Prop)
   (l : @label message (composed2_sig S1 S2))
   (som : @state message (composed2_sig S1 S2) * option (@proto_message _ (composed2_sig S1 S2)))
@@ -316,27 +339,30 @@ Definition composed2_vlsm_constrained
   {message}
   {S1 : LSM_sig message}
   {S2 : LSM_sig message}
-  (M1 : @VLSM message S1)
-  (M2 : @VLSM message S2)
+  {L1 : @LSM message S1}
+  {L2 : @LSM message S2}
+  (M1 : @VLSM message S1 L1)
+  (M2 : @VLSM message S2 L2)
   (constraint : (@label message S1) + (@label message S2) -> (@state message S1 * @state message S2) * option (composed2_proto_message S1 S2) -> Prop)
-  : @VLSM message (composed2_sig S1 S2)
+  : @VLSM message _ (composed2_lsm L1 L2)
   :=
-  {|  transition := composed2_transition M1 M2
-  ;   valid := composed2_valid_constrained M1 M2 constraint
+  {|  valid := composed2_valid_constrained M1 M2 constraint
   |}.
 
 Definition composed2_constrained_valid_decidable
   {message}
   {S1 S2 : LSM_sig message}
-  {M1 : @VLSM message S1}
-  {M2 : @VLSM message S2}
-  (DS1 : @VLSM_vdecidable message S1 M1)
-  (DS2 : @VLSM_vdecidable message S2 M2)
+  {L1 : @LSM message S1}
+  {L2 : @LSM message S2}
+  {M1 : @VLSM message S1 L1}
+  {M2 : @VLSM message S2 L2}
+  (DS1 : @VLSM_vdecidable message S1 L1 M1)
+  (DS2 : @VLSM_vdecidable message S2 L2 M2)
   {constraint : (@label message S1) + (@label message S2) -> ((@state message S1) * (@state message S2)) * option (composed2_proto_message S1 S2) -> Prop}
   (constraint_decidable : forall (l : (@label message S1) + (@label message S2)) (som : ((@state message S1) * (@state message S2)) * option (composed2_proto_message S1 S2)), {constraint l som} + {~constraint l som})
   (l : @label message (composed2_sig S1 S2))
   (som : @state _ (composed2_sig S1 S2) * option (@proto_message _ (composed2_sig S1 S2)))
-  : {@valid _ _ (composed2_vlsm_constrained M1 M2 constraint) l som} + {~@valid _ _ (composed2_vlsm_constrained M1 M2 constraint) l som}.
+  : {@valid _ _ _ (composed2_vlsm_constrained M1 M2 constraint) l som} + {~@valid _ _ _ (composed2_vlsm_constrained M1 M2 constraint) l som}.
 unfold label in l; simpl in l.
 unfold state in som. unfold proto_message in som. simpl in som.
 unfold valid; simpl.
@@ -350,13 +376,15 @@ Defined.
 Definition composed2_vlsm_constrained_vdecidable
   {message}
   {S1 S2 : LSM_sig message}
-  {M1 : @VLSM message S1}
-  {M2 : @VLSM message S2}
-  (DS1 : @VLSM_vdecidable message S1 M1)
-  (DS2 : @VLSM_vdecidable message S2 M2)
+  {L1 : @LSM message S1}
+  {L2 : @LSM message S2}
+  {M1 : @VLSM message S1 L1}
+  {M2 : @VLSM message S2 L2}
+  (DS1 : @VLSM_vdecidable message S1 L1 M1)
+  (DS2 : @VLSM_vdecidable message S2 L2 M2)
   {constraint : (@label message S1) + (@label message S2) -> (@state message S1 * @state message S2) * option (composed2_proto_message S1 S2) -> Prop}
   (constraint_decidable : forall (l : (@label message S1) + (@label message S2)) (som : ((@state message S1) * (@state message S2)) * option (composed2_proto_message S1 S2)), {constraint l som} + {~constraint l som})
-  : @VLSM_vdecidable message _ (composed2_vlsm_constrained M1 M2 constraint)
+  : @VLSM_vdecidable message _ _ (composed2_vlsm_constrained M1 M2 constraint)
   :=
   {|
     valid_decidable := composed2_constrained_valid_decidable DS1 DS2 constraint_decidable
@@ -365,10 +393,12 @@ Definition composed2_vlsm_constrained_vdecidable
 Lemma composed2_partial_composition_commute
   {message}
   {S1 S2 : LSM_sig message}
-  {M1 : @VLSM message S1}
-  {M2 : @VLSM message S2}
-  (DS1 : @VLSM_vdecidable message S1 M1)
-  (DS2 : @VLSM_vdecidable message S2 M2)
+  {L1 : @LSM message S1}
+  {L2 : @LSM message S2}
+  {M1 : @VLSM message S1 L1}
+  {M2 : @VLSM message S2 L2}
+  (DS1 : @VLSM_vdecidable message S1 L1 M1)
+  (DS2 : @VLSM_vdecidable message S2 L2 M2)
   : let PM12 := DVLSM_PLSM_instance (composed2_vlsm_vdecidable DS1 DS2) in
     let PM12' := composed2_plsm (DVLSM_PLSM_instance DS1) (DVLSM_PLSM_instance DS2) in
     @ptransition _ _ PM12 = @ptransition _ _ PM12'.
@@ -389,10 +419,12 @@ Qed.
 Lemma composed2_constrained_partial_composition_commute
   {message}
   {S1 S2 : LSM_sig message}
-  {M1 : @VLSM message S1}
-  {M2 : @VLSM message S2}
-  (DS1 : @VLSM_vdecidable message S1 M1)
-  (DS2 : @VLSM_vdecidable message S2 M2)
+  {L1 : @LSM message S1}
+  {L2 : @LSM message S2}
+  {M1 : @VLSM message S1 L1}
+  {M2 : @VLSM message S2 L2}
+  (DS1 : @VLSM_vdecidable message S1 L1 M1)
+  (DS2 : @VLSM_vdecidable message S2 L2 M2)
   {constraint : (@label message S1) + (@label message S2) -> (@state message S1 * @state message S2) * option (composed2_proto_message S1 S2) -> Prop}
   (constraint_decidable : forall (l : (@label message S1) + (@label message S2)) (som : ((@state message S1) * (@state message S2)) * option (composed2_proto_message S1 S2)), {constraint l som} + {~constraint l som})
   : let PM12 := DVLSM_PLSM_instance (composed2_vlsm_constrained_vdecidable DS1 DS2 constraint_decidable) in
