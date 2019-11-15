@@ -20,10 +20,12 @@ Definition indexed_vlsm_projection
     i
   .
 
-(* Definition indexed_vlsm_constrained_projection
+Definition indexed_vlsm_constrained_projection
+  {message : Type}
   {oindex : Set} {message : Type} `{Heqd : EqDec oindex}
-  (IS : oindex -> LSM_sig message)
-  (IM : forall i : oindex, @VLSM message (IS i))
+  {IS : oindex -> LSM_sig message}
+  {IL : forall i : oindex, @LSM message (IS i)}
+  (IM : forall i : oindex, @VLSM message _ (IL i))
   (constraint : indexed_label IS -> indexed_state IS * option (indexed_proto_message IS) -> Prop)
   (i : oindex)
   : VLSM (message : Type)
@@ -31,9 +33,10 @@ Definition indexed_vlsm_projection
   @vlsm_projection message
     (indexed_sig IS (inhabits i))
     (indexed_sig_composed_instance IS (inhabits i))
-    (indexed_vlsm_constrained IS (inhabits i) constraint)
-    (@indexed_vlsm_constrained_composed_instance oindex message Heqd IS (inhabits i) constraint)
+    (indexed_lsm IL (inhabits i))
+    (indexed_lsm_composed_instance IL (inhabits i))
+    (indexed_vlsm_constrained IM (inhabits i) constraint)
+    (@indexed_vlsm_constrained_composed_instance oindex message Heqd IS IL IM (inhabits i) constraint)
     i
   .
 
- *)

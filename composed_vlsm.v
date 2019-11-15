@@ -555,3 +555,39 @@ Definition indexed_vlsm_composed_instance
   {|   transition_projection_message_type_mismatch := indexed_transition_projection_message_type_mismatch
   |}.
 
+
+Lemma indexed_constrained_transition_projection_message_type_mismatch
+  {oindex : Set} {message : Type} `{Heqd : EqDec oindex}
+  {IS : oindex -> LSM_sig message}
+  {IL : forall i : oindex, @LSM message (IS i)}
+  {IM : forall i : oindex, @VLSM message _ (IL i)}
+  {Hinh : inhabited oindex}
+  {constraint : indexed_label IS -> indexed_state IS * option (indexed_proto_message IS) -> Prop}
+  (s : @state _ (indexed_sig IS Hinh))
+  (m : @proto_message _ (indexed_sig IS Hinh))
+  (l : @label _ (indexed_sig IS Hinh))
+  (i : oindex := indexed_ilabel l)
+  (Hnm : ~ (@iproto_message_prop _ _ (indexed_sig_composed_instance IS Hinh) i (proj1_sig m)))
+  : ~ @valid _ _ _ (indexed_vlsm_constrained IM Hinh constraint)  l (s, Some m) .
+Proof.
+  simpl. destruct l as [j l]. simpl in i. unfold i in *.
+  destruct m as [m Hm]; simpl in Hnm.
+  unfold indexed_valid_constrained; simpl.
+  destruct (proto_message_decidable m)
+  ; intros [Hiv Hc]; contradiction
+  .
+Qed.
+
+
+Definition indexed_vlsm_constrained_composed_instance
+  {oindex : Set} {message : Type} `{Heqd : EqDec oindex}
+  {IS : oindex -> LSM_sig message}
+  {IL : forall i : oindex, @LSM message (IS i)}
+  (IM : forall i : oindex, @VLSM message _ (IL i))
+  (Hinh : inhabited oindex)
+  (constraint : indexed_label IS -> indexed_state IS * option (indexed_proto_message IS) -> Prop)
+  : @composed_vlsm_class message _ _ _ (indexed_lsm_composed_instance IL Hinh) (indexed_vlsm_constrained IM Hinh constraint) :=
+  {|   transition_projection_message_type_mismatch := indexed_constrained_transition_projection_message_type_mismatch
+  |}.
+
+
