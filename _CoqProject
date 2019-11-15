@@ -8,6 +8,8 @@ protocol.v
 fullnode.v
 lightnode.v
 binary.v
+vlsm_preamble.v
+non_constructive.v
 vlsm.v
 two_vlsms.v
 indexed_vlsm.v

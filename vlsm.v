@@ -4,47 +4,6 @@ Import ListNotations.
 From Casper
 Require Import ListExtras.
 
-Axiom proof_irrelevance : forall (P : Prop) (p1 p2 : P), p1 = p2.
-
-Lemma exist_eq
-  {X}
-  (P : X -> Prop)
-  (a b : {x : X | P x})
-  : a = b <-> proj1_sig a = proj1_sig b.
-Proof.
-  destruct a as [a Ha]; destruct b as [b Hb]; simpl.
-  split; intros Heq.
-  - inversion Heq. reflexivity.
-  - subst. apply f_equal. apply proof_irrelevance.
-Qed.
-
-Class EqDec X :=
-  eq_dec : forall x y : X, {x = y} + {x <> y}.
-
-Lemma DepEqDec
-  {X}
-  (Heqd : EqDec X)
-  (P : X -> Prop)
-  : EqDec {x : X | P x}.
-Proof.
-  intros [x Hx] [y Hy].
-  specialize (Heqd x y).
-  destruct Heqd as [Heq | Hneq].
-  - left. subst. apply f_equal. apply proof_irrelevance.
-  - right.  intros Heq. apply Hneq. inversion Heq. reflexivity.
-Qed.
-
-Lemma nat_eq_dec : EqDec nat.
-Proof.
-  unfold EqDec. induction x; destruct y.
-  - left. reflexivity.
-  - right. intros C; inversion C.
-  - right. intros C; inversion C.
-  - specialize (IHx y). destruct IHx as [Heq | Hneq].
-    + left. subst. reflexivity.
-    + right. intros Heq. inversion Heq. contradiction.
-Qed.
-
 (* 2.2.1 VLSM Parameters *)
 
 Class LSM_sig (message : Type) :=
@@ -329,6 +288,22 @@ Definition valid_transition
   exists opm : option protocol_message,
   exists l : label,
   labeled_valid_transition opm l ps ps'.
+
+
+Lemma valid_transition_proof_irrelevance
+  {message}
+  `{V : VLSM message}
+  (ps1 ps1' : protocol_state)
+  (Hv : valid_transition ps1 ps1')
+  (ps2 : protocol_state)
+  (Heq_s : proj1_sig ps1 = proj1_sig ps2)
+  : valid_transition ps2 ps1'.
+Proof.
+  destruct ps1 as [s1 Hps1]. destruct ps2 as [s2 Hps2]. simpl in Heq_s. subst.
+  destruct Hv as [opm [l [Hv Ht]]].
+  exists opm. exists l. 
+  split; try assumption.
+Qed.
 
 (* Valid  VLSM trace *)
 
@@ -675,13 +650,13 @@ Proof.
       assert (Hpt : protocol_trace_prop (Finite [s; ps']))  by (split; assumption).
       exists (exist _ (Finite [s; ps']) Hpt). exists ps'. subst. simpl. split; reflexivity.
     + destruct Hstep as [pt [ps [Heq_last Heq_s]]].
-      assert (s = ps) by (destruct s; destruct ps; simpl in Heq_s; subst; apply f_equal; apply proof_irrelevance).
-      rewrite H in Hvt.
-      apply (extend_protocol_trace pt ps ps') in Hvt; try assumption.
-      destruct Hvt as [pt' Hlast].
+      assert (Hvt' : valid_transition ps ps')
+        by (apply valid_transition_proof_irrelevance with s; assumption).
+      apply (extend_protocol_trace pt ps ps') in Hvt'; try assumption.
+      destruct Hvt' as [pt' Hlast].
       exists pt'. exists ps'. split; subst; auto.
 Qed.
-  
+
 (* Since we already assume choice etc., might as well make it into a function *) 
 
 (* A final state is one which is stuck (no further valid transition is possible) *)
