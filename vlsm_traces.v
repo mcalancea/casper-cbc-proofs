@@ -127,6 +127,7 @@ Inductive LabeledTrace `{VLSM} : Type :=
   : protocol_state -> Stream (label * option protocol_message) -> LabeledTrace
   .
 
+(* 
 Lemma unlabel_finite_trace `{VLSM}
   (s1 : protocol_state)
   (t : list (label * option protocol_message))
@@ -153,7 +154,7 @@ Proof.
       * exists  opm. exists l. assumption.
       * 
 Admitted.
-
+ *)
 (* finite traces originating in a set *)
 
 Definition filtered_finite_trace
@@ -166,7 +167,7 @@ Definition filtered_finite_trace
   match ts with
   | [] => False
   | [s] => False
-  | s :: t => subset s /\ trace_from_to s (last t s) ts
+  | s :: t => subset s /\ trace_from_to s (removelast t) (last t s)
   end.
 
 Definition initial_protocol_state_prop
@@ -179,7 +180,6 @@ Definition initial_protocol_state_prop
 
 Definition start_protocol_state_prop `{VLSM} (s0 : protocol_state) (ts : list protocol_state) : Prop :=
   filtered_finite_trace (fun s => s = s0) ts. 
-           
 
 (* finite traces originating in the set of initial states *)
 
@@ -289,11 +289,28 @@ Proof.
   - unfold protocol_trace_prop in Hpt2. unfold protocol_finite_trace_prop in Hpt2. unfold filtered_finite_trace in Hpt2.
     destruct t2 as [| s1 [| s1' t2]]; try contradiction.
     destruct Hpt2 as [His1 Ht12]. simpl in Hlast2. simpl in Ht12. inversion Hlast2 as [Hlast2']. rewrite Hlast2' in Ht12.
-    apply (extend_trace_from_to_right s1 s2 s3) in Ht12; try assumption.
-    assert (Hpt3 : protocol_trace_prop (Finite ((s1 :: s1' :: t2) ++ [s3]))).
-    { unfold protocol_trace_prop. unfold protocol_finite_trace_prop. unfold filtered_finite_trace. simpl.
-      rewrite last_is_last. split; try assumption. destruct t2; assumption.
+    apply (extend_trace_from_to_right s1 _ s2 s3) in Ht12; try assumption.
+    remember 
+      (match t2 with
+         | [] => []
+         | _ :: _ => s1' :: removelast t2
+         end ++ [s2]
+      ) as t2'.
+    assert (Hpt3 : protocol_trace_prop (Finite (s1 :: t2' ++ [s3]))).
+    { unfold protocol_trace_prop. unfold protocol_finite_trace_prop. unfold filtered_finite_trace. subst. simpl.
+      destruct t2; simpl.
+      split; assumption.
     }
+  
+    destruct t2; subst; simpl in Ht12.
+    + assert (Hpt3 : protocol_trace_prop (Finite [s1; s2; s3])).
+      { unfold protocol_trace_prop. unfold protocol_finite_trace_prop. unfold filtered_finite_trace. simpl.
+        split; assumption.
+      }
+      exists (exist _ (Finite [s1; s2; s3]) Hpt3).
+      simpl. apply f_equal. reflexivity.
+    + 
+        
     exists (exist _ (Finite ((s1 :: s1' :: t2) ++ [s3])) Hpt3).
     simpl. apply f_equal. rewrite last_is_last. destruct t2; reflexivity.
   - simpl in Hlast2. inversion Hlast2.
