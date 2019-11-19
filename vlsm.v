@@ -49,6 +49,7 @@ Qed.
 
 Class LSM_sig (message : Type) :=
   { state : Type
+  ; label : Type
   ; proto_message_prop : message -> Prop
   ; proto_message_decidable : forall m, {proto_message_prop m} + {~ proto_message_prop m}
   ; proto_message := { m : message | proto_message_prop m }
@@ -58,28 +59,24 @@ Class LSM_sig (message : Type) :=
   ; initial_message := { m : proto_message | initial_message_prop m }
   ; protocol_state_inhabited : inhabited initial_state
   ; message_inhabited : inhabited proto_message
+  ; label_inhabited : inhabited label
   }.
 
 Class PLSM (message : Type) `{Sig : LSM_sig message} :=
-  {
-    plabel : Type
-  ; plabel_inhabited : inhabited plabel
-  ; ptransition : plabel -> state * option proto_message -> option (state * option proto_message)
+  { ptransition : label -> state * option proto_message -> option (state * option proto_message)
   }.
 
-Class VLSM (message : Type) `{Sig : LSM_sig message } := 
-  {
-    label : Type
-  ; label_inhabited : inhabited label
-  ; transition : label -> state * option proto_message -> state * option proto_message
+Class VLSM (message : Type) `{Sig : LSM_sig message } :=
+  { transition : label -> state * option proto_message -> state * option proto_message
   ; valid : label -> state * option proto_message -> Prop
   }.
+
 
 Definition ptransition_to_transition
   {message}
   {Sig : LSM_sig message}
   `{PM : @PLSM message Sig}
-  (l : plabel)
+  (l : label)
   (som :  state * option proto_message)
   : state * option proto_message
   :=
@@ -93,7 +90,7 @@ Definition ptransition_to_valid
   {message}
   {Sig : LSM_sig message}
   `{PM : @PLSM message Sig}
-  (l : plabel)
+  (l : label)
   (som :  state * option proto_message)
   : Prop
   :=
@@ -106,15 +103,14 @@ Definition PLSM_VLSM_instance
   `{PM : @PLSM message Sig}
   : @VLSM message Sig
   :=
-    {|  label := plabel
-     ;  label_inhabited := plabel_inhabited
-     ;  transition := ptransition_to_transition
-     ;  valid := ptransition_to_valid
+  {|  transition := ptransition_to_transition
+  ;   valid := ptransition_to_valid
   |}.
 
 Class VLSM_vdecidable (message : Type) `{M : VLSM message} :=
   { valid_decidable : forall l som, {valid l som} + {~valid l som} 
   }.
+
 
 Definition transition_valid_ptransition
   {message}
@@ -137,9 +133,7 @@ Definition DVLSM_PLSM_instance
   `(DVM : @VLSM_vdecidable message Sig VM)
   : @PLSM message Sig
   :=
-    {|  plabel := label;
-        plabel_inhabited := label_inhabited;
-        ptransition := transition_valid_ptransition
+  {|  ptransition := transition_valid_ptransition
   |}.
 
 
