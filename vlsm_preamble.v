@@ -13,3 +13,12 @@ Proof.
     + left. subst. reflexivity.
     + right. intros Heq. inversion Heq. contradiction.
 Qed.
+
+Fixpoint safe_nth {X: Type} (xs: list X) (bn : {n : nat | n < length xs}) : X.
+destruct bn as [n Hn].
+destruct xs.
+- exfalso. inversion Hn.
+- destruct n.
+  + exact x.
+  + exact (safe_nth X xs (exist _ n (le_pred _ _ Hn))).
+Defined.

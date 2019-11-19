@@ -24,6 +24,8 @@ ctl.vo ctl.glob ctl.v.beautified: ctl.v preamble.vo ListExtras.vo ListSetExtras.
 ctl.vio: ctl.v preamble.vio ListExtras.vio ListSetExtras.vio RealsExtras.vio protocol.vio definitions.vio
 vlsm.vo vlsm.glob vlsm.v.beautified: vlsm.v ListExtras.vo
 vlsm.vio: vlsm.v ListExtras.vio
+vlsm_traces.vo vlsm_traces.glob vlsm_traces.v.beautified: vlsm_traces.v ListExtras.vo vlsm.vo
+vlsm_traces.vio: vlsm_traces.v ListExtras.vio vlsm.vio
 vlsm_preamble.vo vlsm_preamble.glob vlsm_preamble.v.beautified: vlsm_preamble.v
 vlsm_preamble.vio: vlsm_preamble.v
 two_vlsms.vo two_vlsms.glob two_vlsms.v.beautified: two_vlsms.v vlsm.vo
@@ -40,3 +42,5 @@ indexed_vlsm_projections.vo indexed_vlsm_projections.glob indexed_vlsm_projectio
 indexed_vlsm_projections.vio: indexed_vlsm_projections.v vlsm.vio vlsm_preamble.vio composed_vlsm.vio composed_vlsm_projections.vio indexed_vlsm.vio
 commute.vo commute.glob commute.v.beautified: commute.v preamble.vo ListExtras.vo ListSetExtras.vo RealsExtras.vo protocol.vo common.vo definitions.vo vlsm.vo indexed_vlsm.vo
 commute.vio: commute.v preamble.vio ListExtras.vio ListSetExtras.vio RealsExtras.vio protocol.vio common.vio definitions.vio vlsm.vio indexed_vlsm.vio
+vlsm_independence.vo vlsm_independence.glob vlsm_independence.v.beautified: vlsm_independence.v vlsm.vo
+vlsm_independence.vio: vlsm_independence.v vlsm.vio

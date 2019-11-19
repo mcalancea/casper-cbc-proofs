@@ -1,7 +1,7 @@
 Require Import Bool List Streams Logic.Epsilon.
 Import List Notations.
 From Casper 
-Require Import preamble ListExtras ListSetExtras RealsExtras protocol common definitions vlsm indexed_vlsm.
+Require Import preamble ListExtras ListSetExtras RealsExtras protocol common definitions vlsm vlsm_traces indexed_vlsm.
 
 (* 3.1 Decisions on consensus values *) 
 

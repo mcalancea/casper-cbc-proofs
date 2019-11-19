@@ -3,7 +3,7 @@ COQDEP = coqdep
 
 COQ_FLAG = -Q "." Casper
 
-SOURCE := preamble.v ListExtras.v ListSetExtras.v RealsExtras.v sorted_lists.v protocol.v common.v definitions.v fullnode.v lightnode.v binary.v ctl.v vlsm.v vlsm_preamble.v two_vlsms.v indexed_vlsm.v non_constructive.v composed_vlsm.v composed_vlsm_projections.v indexed_vlsm_projections.v commute.v 
+SOURCE := preamble.v ListExtras.v ListSetExtras.v RealsExtras.v sorted_lists.v protocol.v common.v definitions.v fullnode.v lightnode.v binary.v ctl.v vlsm.v vlsm_traces.v vlsm_preamble.v two_vlsms.v indexed_vlsm.v non_constructive.v composed_vlsm.v composed_vlsm_projections.v indexed_vlsm_projections.v commute.v vlsm_independence.v
 
 VO_FILE := $(shell find "." -type f -name '*.vo')
 GLOB_FILE := $(shell find "." -type f -name '*.glob')
