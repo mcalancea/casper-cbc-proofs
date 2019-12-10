@@ -451,24 +451,21 @@ Section Full.
   Qed.
 
   (* Reachability *)
-  (* VLSM reachability defined in terms of protocol traces (transition and validity) *) 
-  Definition vlsm_next : protocol_state -> protocol_state -> Prop :=
-    fun s1 s2 => protocol_trace_prop (Finite [s1; s2]).
-
-  Lemma next_equiv :
-    forall (s1 s2 : protocol_state),
-      vlsm_next s1 s2 <->
-      exists (msg : @message C V), add_in_sorted_fn msg (proj1_sig (proj1_sig s1)) = proj1_sig (proj1_sig s2).
-  Proof. Admitted.
 
   Definition vlsm_reach : protocol_state -> protocol_state -> Prop :=
     fun s1 s2 => exists (tr : protocol_trace_from (fun s => s = s1)), in_trace s2 tr.
 
-  Lemma reach_equiv :
-    forall (s1 s2 : protocol_state),
-      vlsm_reach s1 s2 <->
+  Lemma reach_equiv
+    (s1 s2 : protocol_state)
+    : vlsm_reach s1 s2 <->
       incl (get_messages (proj1_sig (proj1_sig s1))) (get_messages (proj1_sig (proj1_sig s2))).
-  Proof. Admitted.
+  Proof.
+    split; intro H.
+    - unfold vlsm_reach in H. destruct H as [[tr Htr] Hin]. simpl in Hin.
+      destruct tr as [tr | tr]; simpl in Htr
+      .
+      + destruct tr as [|s1']; try inversion Htr. destruct tr as [|s]; try inversion Htr; subst; clear Htr.
+  Admitted.
   
   (* VLSM state union *)
   Lemma join_protocol_state :
