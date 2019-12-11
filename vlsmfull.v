@@ -465,6 +465,10 @@ Section Full.
       destruct tr as [tr | tr]; simpl in Htr
       .
       + destruct tr as [|s1']; try inversion Htr. destruct tr as [|s]; try inversion Htr; subst; clear Htr.
+        remember (List.last (s :: tr) s1) as lst. remember (s1 :: s :: tr) as t.
+        destruct Hin as [n Heqn]. simpl in Heqn.
+        induction H0.
+        * inversion Heqt; subst; clear Heqt.  clear H1. simpl in Hin. simpl in H.
   Admitted.
   
   (* VLSM state union *)

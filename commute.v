@@ -1,61 +1,88 @@
 Require Import Bool List Streams Logic.Epsilon.
 Import List Notations.
 From Casper 
-Require Import preamble ListExtras ListSetExtras RealsExtras protocol common definitions vlsm indexed_vlsm.
+Require Import preamble ListExtras ListSetExtras RealsExtras protocol common definitions vlsm indexed_vlsm composed_vlsm composed_vlsm_projections indexed_vlsm_projections.
 
 (* 3.1 Decisions on consensus values *) 
 
 (* Need to add consensus values (and decision functions) to VLSM definitions? *) 
-Class VLSM_plus `{VLSM} :=
+(* Class VLSM_plus `{VLSM} :=
   { C : Type;
     about_C : exists (c1 c2 : C), c1 <> c2;
   }.
-
-Definition decision `{VLSM_plus} : Type := protocol_state -> option C -> Prop. 
+ *)
+Definition decision `{VLSM} (C : Type) : Type := state -> option C. 
 
 (* 3.2.1 Decision finality *)
-Program Definition prot_state0 `{VLSM} : protocol_state := 
+(* Program Definition prot_state0 `{VLSM} : protocol_state := 
   exist protocol_state_prop (proj1_sig s0) _.
 Next Obligation.
   red.
   exists None. 
   constructor.
 Defined.
-
+ *)
 Definition Trace_nth `{VLSM} (tr : Trace)
-  : nat -> protocol_state :=
+  : nat -> option protocol_state :=
   fun (n : nat) => match tr with
-              | Finite ls => nth n ls prot_state0
-              | Infinite st => Str_nth n st end. 
+              | Finite ls => nth_error ls n
+              | Infinite st => Some (Str_nth n st) end. 
 
-Definition final `{VLSM_plus} : decision -> Prop :=
-  fun (D : decision) => forall (tr : Trace), 
-      forall (n1 n2 : nat) (c1 c2 : option C),
-        (D (Trace_nth tr n1) c1 -> c1 <> None) ->
-        (D (Trace_nth tr n1) c2 -> c2 <> None) ->
-        c1 = c2.
+Definition decisions_final `{X : VLSM} {C} (D : decision C) : Prop :=
+  forall (tr : Trace),
+      forall (n1 n2 : nat)
+        (oc1 := option_map D (option_map (@proj1_sig _ _) (Trace_nth tr n1)))
+        (oc2 := option_map D (option_map (@proj1_sig _ _) (Trace_nth tr n2))),
+        (oc1 <> None) ->
+        (oc2 <> None) ->
+        oc1 = oc2.
 
 (* 3.2.2 Decision consistency *)
 Definition in_trace `{VLSM} : protocol_state -> Trace -> Prop :=
-  fun (s : protocol_state) (tr : Trace) => exists (n : nat), Trace_nth tr n = s.
+  fun (s : protocol_state) (tr : Trace) => exists (n : nat), Trace_nth tr n = Some s.
 
-Definition consistent
-  {index : Set}
-  {message : Type}
-  `{VLSM_plus}
-  (IS : index -> LSM_sig message)
-  (IM : forall i : index, @VLSM message (IS i))
-  (ID : index -> decision)
+Definition decisions_final_consistent
+  {index : Set} {message : Type} `{Heqd : EqDec index}
+  {IS : index -> LSM_sig message}
+  {IM : forall i : index, @VLSM message (IS i)}
+  (Hi : index)
+  (constraint : indexed_label IS -> indexed_state IS * option (indexed_proto_message IS) -> Prop)
+  {C : Type}
+  (ID : forall i : index, @decision _ _ (indexed_vlsm_constrained_projection IM constraint i) C)
   : Prop
   :=
     (* Assuming we want traces of the overall protocol *)
-    forall (tr : protocol_trace) (s : protocol_state),
-      in_trace s tr ->
-      forall (n1 n2 j k : index),
-      exists (c1 c2 : C),
-        (ID n1) s (Some c1) -> (ID n2) s (Some c2) ->
-        forall (c : C),
-          (ID n1) s (Some c) <-> (ID n2) s (Some c).       
+    forall (tr : @protocol_trace _ _ (indexed_vlsm_constrained IM Hi constraint)),
+      forall (n1 n2 : nat) (j k : index)
+        (osn1 := option_map (@proj1_sig _ _) (Trace_nth tr n1))
+        (osn2 := option_map (@proj1_sig _ _) (Trace_nth tr n2))
+        (proj := @istate_proj _ _ (@indexed_sig_composed_instance _ _ Heqd IS Hi))
+        (osn1j := option_map (proj j) osn1)
+        (osn2k := option_map (proj k) osn2)
+        (oc1j := option_map (ID j) osn1j)
+        (oc2k := option_map (ID k) osn2k),
+        (oc1j <> None) ->
+        (oc2k <> None) ->
+        oc1j = oc2k.
+
+Lemma decisions_final_consistent_includes_decisions_final
+  {index : Set} {message : Type} `{Heqd : EqDec index}
+  {IS : index -> LSM_sig message}
+  {IM : forall i : index, @VLSM message (IS i)}
+  (Hi : index)
+  (constraint : indexed_label IS -> indexed_state IS * option (indexed_proto_message IS) -> Prop)
+  {C : Type}
+  (ID : forall i : index, @decision _ _ (indexed_vlsm_constrained_projection IM constraint i) C)
+  : decisions_final_consistent Hi constraint ID -> forall i : index, decisions_final (ID i).
+Proof.
+  intros DFC i tr n1 n2 oc1 oc2 H1 H2.
+  specialize (DFC tr n1 n2).
+  remember oc1 as oc1'. unfold oc1 in *; clear oc1.
+  destruct oc1'; try (exfalso; apply H1; reflexivity); clear H1.
+  remember oc2 as oc2'. unfold oc2 in *; clear oc2.
+  destruct oc2'; try (exfalso; apply H2; reflexivity); clear H2.
+  apply f_equal.
+ simpl.
   
 (* 3.3.1 Initial protocol state bivalence *)
 Definition bivalent `{VLSM_plus} : decision -> Prop :=
